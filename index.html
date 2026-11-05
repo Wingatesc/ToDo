@@ -1,0 +1,77 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Life RPG</title><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><meta name="theme-color" content="#14172b">
+<style>
+:root{--bg:#14172b;--panel:#1f2340;--line:#343a66;--tx:#ece6d6;--mute:#9a9cbc;--gold:#f2b84b;box-sizing:border-box;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 "Trebuchet MS","Segoe UI",system-ui,sans-serif;padding-bottom:96px}
+header{padding:16px 16px 4px}h1{margin:0;font-size:22px;letter-spacing:.5px}.sub{color:var(--mute);font-size:13px}
+#strip{display:flex;gap:8px;overflow-x:auto;padding:12px 16px}
+.av{flex:0 0 74px;background:none;border:0;color:var(--tx);text-align:center;font:inherit;font-size:12px;cursor:pointer}
+.av svg{display:block;margin:0 auto 2px}
+section{margin:8px 16px 18px}h2{font-size:16px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+.row{display:flex;align-items:center;gap:12px;background:var(--panel);border-left:4px solid var(--c);border-radius:10px;padding:10px 12px;margin-bottom:6px}
+.row.rep{border-left-style:dashed}.chk{width:30px;height:30px;border-radius:50%;border:2px solid var(--c);background:none;color:#fff;font-size:16px;flex:none}
+.chk.on{background:var(--c)}.ttl{flex:1;text-align:left;background:none;border:0;color:var(--tx);font:inherit;padding:4px 0}
+.w{color:var(--gold);font-size:13px;font-weight:700}.empty{color:var(--mute);font-size:14px;margin:4px 0 10px}
+.fab{position:fixed;right:18px;bottom:calc(20px + env(safe-area-inset-bottom));width:60px;height:60px;border-radius:50%;border:0;background:var(--gold);color:#14172b;font-size:34px;box-shadow:0 4px 14px #0008}
+nav{display:flex;gap:10px;padding:0 16px;flex-wrap:wrap}nav button,dialog button.b{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font:inherit}
+dialog{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:14px;width:min(92vw,420px);padding:16px}dialog::backdrop{background:#000a}
+label{display:block;margin:10px 0 4px;color:var(--mute);font-size:13px}input[type=text],select{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font:inherit}
+.acts{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}.pri{background:var(--gold)!important;color:#14172b!important;border:0!important;font-weight:700}
+.log{border-top:1px solid var(--line);padding:8px 0;display:flex;gap:8px;align-items:center;font-size:14px}.log span{flex:1}.log small{color:var(--mute)}
+#rev{position:fixed;inset:0;background:#14172bf2;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;z-index:9}#rev.on{display:flex;animation:pop .5s}
+@keyframes pop{from{transform:scale(.8);opacity:0}}@media(prefers-reduced-motion:reduce){#rev.on{animation:none}}
+#toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--gold);color:#14172b;padding:8px 16px;border-radius:20px;font-weight:700;display:none;z-index:10}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+</style></head><body>
+<header><h1>Life RPG</h1><div class="sub" id="bk"></div></header>
+<div id="strip"></div><main id="main"></main>
+<nav><button onclick="openLog()">Log</button><button onclick="exp()">Export backup</button><button onclick="imp.click()">Import backup</button></nav>
+<input type="file" id="imp" accept=".json,application/json" hidden>
+<button class="fab" aria-label="Add todo" onclick="openTodo()">+</button>
+<dialog id="dt"><h2 id="dtt">New todo</h2><label>Title</label><input type="text" id="f-t" autocomplete="off">
+<label>Character</label><select id="f-c"></select><label>Weight (XP)</label><select id="f-w"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+<label><input type="checkbox" id="f-r"> Repeatable</label>
+<div class="acts"><button class="b" id="f-d" onclick="delTodo()">Delete</button><button class="b" onclick="dt.close()">Cancel</button><button class="b pri" onclick="saveTodo()">Save</button></div></dialog>
+<dialog id="dl"><div id="dlb"></div><div class="acts"><button class="b" onclick="dl.close()">Close</button></div></dialog>
+<div id="rev" onclick="this.classList.remove('on')"></div><div id="toast"></div>
+<script>
+const CFG={xpPerLevel:5,stages:[1,5,10,20,35]};
+const CH=[["str","Strength","⚔️","#e0654f","Recruit,Fighter,Veteran,Champion,Legend"],["int","Intelligence","📖","#4f9de0","Student,Scholar,Researcher,Master,Oracle"],["cha","Charisma","🎭","#d86fc0","Busker,Performer,Storyteller,Icon,Legend"],["wis","Wisdom","🌿","#58c08a","Seeker,Thinker,Mentor,Sage,Elder"],["tec","Tech","💻","#f2b84b","Tinkerer,Coder,Engineer,Architect,Wizard"],["art","Artisanry","🎨","#9a7be0","Apprentice,Maker,Craftsperson,Artisan,Grandmaster"]];
+let S={chars:CH.map(c=>({id:c[0],name:c[1],icon:c[2],color:c[3],stages:c[4].split(","),xp:0})),todos:[],log:[],lastBackup:null};
+const $=i=>document.getElementById(i),esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m])),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const base=n=>CFG.xpPerLevel*(n-1)*n/2,lv=xp=>{let n=1;while(xp>=base(n+1))n++;return n},stg=l=>CFG.stages.filter(t=>l>=t).length-1,ch=id=>S.chars.find(c=>c.id===id);
+const idb=()=>new Promise((ok,no)=>{const r=indexedDB.open("liferpg",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+async function load(){try{const d=await idb();return await new Promise(ok=>{const q=d.transaction("kv").objectStore("kv").get("s");q.onsuccess=()=>ok(q.result);q.onerror=()=>ok()})}catch(e){}}
+function save(){idb().then(d=>d.transaction("kv","readwrite").objectStore("kv").put(S,"s")).catch(()=>toast("Could not save"))}
+function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(e._t);e._t=setTimeout(()=>e.style.display="none",1800)}
+function avatar(c,sz){const l=lv(c.xp),p=(c.xp-base(l))/(base(l+1)-base(l)),R=sz/2-5,C=2*Math.PI*R,s=stg(l);
+return `<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}"><circle cx="${sz/2}" cy="${sz/2}" r="${R}" fill="${c.color}22" stroke="${c.color}44" stroke-width="5"/><circle cx="${sz/2}" cy="${sz/2}" r="${R}" fill="none" stroke="${c.color}" stroke-width="5" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 ${sz/2} ${sz/2})" stroke-linecap="round"/><text x="50%" y="52%" font-size="${sz*.4}" text-anchor="middle" dominant-baseline="middle">${c.icon}</text><text x="50%" y="${sz-2}" font-size="${sz*.14}" text-anchor="middle" fill="#ece6d6">${"•".repeat(s+1)}</text></svg>`}
+function render(){
+$("bk").textContent=S.lastBackup?"Last backup: "+new Date(S.lastBackup).toLocaleDateString():"No backup yet";
+$("strip").innerHTML=S.chars.map(c=>`<button class="av" onclick="openChar('${c.id}')">${avatar(c,64)}${esc(c.name)}<br>Lv ${lv(c.xp)}</button>`).join("");
+$("main").innerHTML=S.chars.map(c=>{const t=S.todos.filter(x=>x.ch===c.id),a=t.filter(x=>!x.rep),r=t.filter(x=>x.rep);
+const row=x=>`<div class="row ${x.rep?"rep":""}" style="--c:${c.color}"><button class="chk" aria-label="Done" onclick="tick('${x.id}',this)"></button><button class="ttl" onclick="openTodo('${x.id}')">${esc(x.title)}</button><span class="w">+${x.w}</span></div>`;
+return `<section><h2 style="color:${c.color}">${c.icon} ${esc(c.name)}</h2>${a.map(row).join("")}${r.length?`<div class="sub">Repeatable</div>`+r.map(row).join(""):""}${t.length?"":`<div class="empty">No todos yet.</div>`}</section>`}).join("");save()}
+function gain(c,d){const l0=lv(c.xp),s0=stg(l0);c.xp=Math.max(0,c.xp+d);const l1=lv(c.xp),s1=stg(l1);
+if(d>0&&l1>l0){navigator.vibrate&&navigator.vibrate(120);if(s1>s0){$("rev").innerHTML=`${avatar(c,180)}<h2 style="justify-content:center;color:${c.color}">${esc(c.stages[s1]||"New stage")}</h2><div>${esc(c.name)} reached level ${l1}</div><div class="sub">Tap to continue</div>`;$("rev").classList.add("on")}else toast(`${c.name} reached level ${l1}!`)}}
+function tick(id,b){const x=S.todos.find(t=>t.id===id),c=ch(x.ch);gain(c,x.w);S.log.unshift({id:uid(),at:Date.now(),title:x.title,ch:x.ch,xp:x.w,td:x.rep?null:x});
+if(!x.rep)S.todos=S.todos.filter(t=>t!==x);else{b.classList.add("on");setTimeout(()=>b.classList.remove("on"),900)}render()}
+let ed=null;
+function openTodo(id){ed=id?S.todos.find(t=>t.id===id):null;$("dtt").textContent=ed?"Edit todo":"New todo";$("f-t").value=ed?ed.title:"";
+$("f-c").innerHTML=S.chars.map(c=>`<option value="${c.id}">${c.icon} ${esc(c.name)}</option>`).join("");$("f-c").value=ed?ed.ch:S.chars[0].id;$("f-w").value=ed?ed.w:3;$("f-r").checked=ed?!!ed.rep:false;
+$("f-d").style.display=ed?"":"none";$("dt").showModal();if(!ed)$("f-t").focus()}
+function saveTodo(){const t=$("f-t").value.trim();if(!t){toast("Enter a title");return}const d={title:t,ch:$("f-c").value,w:+$("f-w").value,rep:$("f-r").checked};
+if(ed)Object.assign(ed,d);else S.todos.push({id:uid(),...d});$("dt").close();render()}
+function delTodo(){if(ed&&confirm("Delete this todo? XP and log stay unchanged.")){S.todos=S.todos.filter(t=>t!==ed);$("dt").close();render()}}
+function logRows(f){const L=S.log.filter(f);return L.length?L.map(e=>`<div class="log"><span>${esc(e.title)}<br><small>${esc(ch(e.ch)?.name||e.ch)} · ${new Date(e.at).toLocaleString()} · +${e.xp} XP</small></span><button class="b" onclick="undo('${e.id}')">Undo</button></div>`).join(""):`<div class="empty">Nothing logged yet.</div>`}
+function openLog(){$("dlb").innerHTML=`<h2>Log</h2>${logRows(()=>true)}<div class="acts"><button class="b" onclick="clearLog()">Empty log</button></div>`;$("dl").showModal()}
+function openChar(id){const c=ch(id),l=lv(c.xp),s=stg(l);$("dlb").innerHTML=`<div style="text-align:center">${avatar(c,160)}<h2 style="justify-content:center;color:${c.color}">${esc(c.name)}</h2><div>${esc(c.stages[s]||"")} · Level ${l}</div><div class="sub">${c.xp-base(l)} / ${base(l+1)-base(l)} XP to next level</div></div><h2 style="margin-top:14px">Log</h2>${logRows(e=>e.ch===id)}`;$("dl").showModal()}
+function undo(id){const e=S.log.find(x=>x.id===id);if(!e)return;const c=ch(e.ch);if(c)gain(c,-e.xp);if(e.td&&!S.todos.some(t=>t.id===e.td.id))S.todos.push(e.td);S.log=S.log.filter(x=>x!==e);render();dl.close();toast("Undone")}
+function clearLog(){if(confirm("Empty the log? XP and levels are not affected.")){S.log=[];render();dl.close()}}
+function exp(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:"application/json"}));a.download="life-rpg-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();S.lastBackup=Date.now();render();toast("Backup exported")}
+$("imp").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.chars)||!Array.isArray(d.todos)||!Array.isArray(d.log))throw 0;
+if(confirm("Replace everything in the app with this backup?")){S=d;render();toast("Backup imported")}}catch(x){alert("This file is not a valid Life RPG backup.")}e.target.value=""};r.readAsText(f)};
+load().then(d=>{if(d&&Array.isArray(d.chars))S=d;render()});
+if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script></body></html>
