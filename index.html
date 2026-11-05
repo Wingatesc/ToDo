@@ -37,7 +37,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <div id="rev" onclick="this.classList.remove('on')"></div><div id="toast"></div>
 <script>
 const CFG={xpPerLevel:5,stages:[1,5,10,20,35]};
-const CH=[["str","Strength","⚔️","#e0654f","Recruit,Fighter,Veteran,Champion,Legend"],["int","Intelligence","📖","#4f9de0","Student,Scholar,Researcher,Master,Oracle"],["cha","Social","🎭","#d86fc0","Busker,Performer,Storyteller,Icon,Legend"],["wis","Wisdom","🌿","#58c08a","Seeker,Thinker,Mentor,Sage,Elder"],["tec","Tech","💻","#f2b84b","Tinkerer,Coder,Engineer,Architect,Wizard"],["art","Artisanry","🎨","#9a7be0","Apprentice,Maker,Craftsperson,Artisan,Grandmaster"]];
+const CH=[["str","Hygiène de vie","⚔️","#e0654f","Recruit,Fighter,Veteran,Champion,Legend"],["int","Travail","📖","#4f9de0","Student,Scholar,Researcher,Master,Oracle"],["cha","Social","🎭","#d86fc0","Busker,Performer,Storyteller,Icon,Legend"],["wis","Dating","🌿","#58c08a","Seeker,Thinker,Mentor,Sage,Elder"],["tec","Projets persos","💻","#f2b84b","Tinkerer,Coder,Engineer,Architect,Wizard"],["art","Artisanry","🎨","#9a7be0","Apprentice,Maker,Craftsperson,Artisan,Grandmaster"]];
 let S={chars:CH.map(c=>({id:c[0],name:c[1],icon:c[2],color:c[3],stages:c[4].split(","),xp:0})),todos:[],log:[],lastBackup:null};
 const $=i=>document.getElementById(i),esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m])),uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const base=n=>CFG.xpPerLevel*(n-1)*n/2,lv=xp=>{let n=1;while(xp>=base(n+1))n++;return n},stg=l=>CFG.stages.filter(t=>l>=t).length-1,ch=id=>S.chars.find(c=>c.id===id);
